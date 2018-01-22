@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Markdown</title>
+  <style>
+    .logo {
+      display: block;
+      text-align: center;
+      text-decoration: none;
+      color: #333;
+      font-size: 24px;
+    }
+    .preview > div,
+    textarea {
+      min-height: 600px;
+    }
+    .preview,
+    .left {
+      float: left;
+      width: 50%;
+    }
+    .preview > div,
+    textarea,
+    input[type="text"] {
+      width: 100%;
+      display: block;
+      border: solid 1px #ddd;
+      margin: 12px 0;
+      padding: 12px;
+      box-sizing: border-box;
+    }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/16.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/16.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/0.3.12/marked.min.js"></script>
+  <script src="http://cdnjs.cloudflare.com/ajax/libs/babel-standalone/6.10.3/babel.min.js"></script>
+  <script type="text/babel">
+    class App extends React.Component {
+      constructor(props) {
+        super(props);
+        this.state = {
+          title: '',
+          text: '',
+        }
+        this.formChange = this.formChange.bind(this);
+      }
+      formChange (e) {
+        this.setState({[e.target.name]: e.target.value });
+      }
+      render () {
+        const { title, text} = this.state;
+        return (
+          <div>
+            <a href="/" className="logo"># Markdown</a>
+            <div>
+              <input onChange={this.formChange} placeholder="Title" name="title" type="text" value={title} />
+            </div>
+            <div className="left">
+              <textarea onChange={this.formChange} placeholder="Enter markdown text" className="textarea" name="text" value={text} />  
+            </div>
+            <div className="preview">
+              <div dangerouslySetInnerHTML={{__html: marked(text)}}></div> 
+            </div>
+          </div>
+        );
+      }
+    }
+    ReactDOM.render(
+      <App /> ,
+      document.getElementById('app')
+    )
+  </script>
+</body>
+</html>

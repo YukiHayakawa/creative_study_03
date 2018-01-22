@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0-alpha.3/css/materialize.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/2.10.0/github-markdown.min.css">
+  <style>
+    .textarea {
+      border: none;
+      background: #666;
+      color: #fff;
+      outline: none;
+    }
+    .preview,
+    .textarea {
+      padding: 16px;
+      min-height: 900px;
+      line-height: 1.6;
+      display: block;
+    }
+    .preview ul {
+      padding-left: 16px;
+    }
+    .preview ul li {
+      list-style-type: disc;
+    }
+    .preview ol {
+      padding-left: 16px;
+    }
+    .preview ol li {
+      list-style-type: decimal;
+    }
+    .row {
+      margin: 0;
+    }
+    .main .collection {
+      margin: 0;
+    }
+    .main .block {
+      padding: 0;
+    }
+    .errorMsg {
+      position: fixed;
+      bottom: 12px;
+      padding: 12px;
+      background: #333;
+      color: #fff;
+      left: 0;
+      right: 0;
+      margin: auto;
+      width: 400px;
+      border-radius: 4px;
+
+    }
+    .title {
+      padding: 0 12px;
+      margin: 0;
+      background: #fafafa;
+      border-bottom: solid 1px #ddd;
+    }
+    .title input[type=text],
+    .title input[type=text]:focus {
+      border: none !important;
+      box-shadow: none !important;
+      margin: 0;
+    }
+  </style>
+  <title>Markdown</title>
+</head>
+<body>
+  <div id="app"></div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/16.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/16.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/0.3.12/marked.min.js"></script>
+  <script src="http://cdnjs.cloudflare.com/ajax/libs/babel-standalone/6.10.3/babel.min.js"></script>
+  <script type="text/babel">
+    class App extends React.Component {
+      constructor(props) {
+        super(props);
+        this.state = {
+          title: '',
+          text: '',
+          errorMsg: false,
+          nav: true,
+          list: [],
+          error: false,
+          locationId: location.search.replace(/.+?item=(\w+?)(&.*?$|$)/,'$1')
+        }
+        this.formSubmit = this.formSubmit.bind(this);
+        this.formChange = this.formChange.bind(this);
+        this.navToggle = this.navToggle.bind(this);
+      }
+
+      componentDidMount() {
+        fetch('/list.json').then((response) => {
+          return response.json();
+        }).then((json) => {
+          if (json.error) {
+            this.setState({error: true})
+          } else {
+            const pageDate = json.data.filter((item) => item._id === this.state.locationId);
+            this.setState(Object.assign({list: json.data},pageDate.length > 0 ? pageDate[0] : {}))
+          }
+        });
+      }
+
+      navToggle () {
+        this.setState({nav: !this.state.nav})
+      }
+      formChange (e) {
+        this.setState({[e.target.name]: e.target.value });
+      }
+
+      formSubmit (e) {
+        e.preventDefault();
+        const { title, text, _id } = this.state;
+        if (title === '' || text === '') {
+          this.setState({errorMsg: true });
+        } else {
+          this.setState({errorMsg: false });
+          fetch('/update.json', {
+            method: 'POST',
+            body : JSON.stringify(Object.assign({ title, text },_id ? {_id} : {})),
+            headers : new Headers({ "Content-type" : "application/json" })
+          }).then((response) => {
+            return response.json();
+          }).then((json) => {
+            location.href = `?item=${json.data._id}`;
+          });
+        }
+      }
+      render () {
+        const { title, text, list, errorMsg, nav, _id} = this.state;
+        return (
+          <div>
+            <nav>
+              <div className="nav-wrapper">
+                <div className="row">
+                  <div className="col s12">
+                  <a href="/" className="brand-logo center"># Markdown</a>
+                  <ul className="left">
+                    <li>
+                      <a onClick={this.navToggle}>
+                        <i className="material-icons">format_list_bulleted</i>
+                      </a>
+                    </li>
+                  </ul>
+                  <ul className="right">
+                    <li>
+                      <a onClick={this.formSubmit}><i className="material-icons">send</i></a>
+                    </li>  
+                  </ul>
+                </div>
+              </div>
+            </div>
+            </nav>
+              <div className="row">
+                <div className="row main">
+                  {nav &&
+                    <div class="col s2 block">
+                      {list.length > 0 &&
+                        <div class="collection">
+                          {list.map(item =>(
+                            <a href={`?item=${item._id}`} class="truncate collection-item">
+                              {_id && item._id === _id &&
+                                <span class="new badge" data-badge-caption="edit"></span>
+                              }
+                              {item.title}
+                            </a>
+                          ))}
+                        </div>
+                      }
+                    </div>
+                  }
+                  <div class={nav ? 'col s10 block' : 'col s12 block'}>
+                    <div className="title">
+                      <input onChange={this.formChange} placeholder="Title" name="title" type="text" className="validate" value={title} />
+                    </div>
+                    <div class="col s6 block">
+                      <textarea onChange={this.formChange} placeholder="Enter markdown text" className="textarea" name="text" value={text} />  
+                    </div>
+                    <div class="col s6 block">
+                      <div className="preview markdown-body" dangerouslySetInnerHTML={{__html: marked(text)}}></div> 
+                    </div>
+                  </div>
+                </div>
+                {this.state.errorMsg && 
+                  <p className="errorMsg z-depth-2">入力に不備があります。</p>
+                }
+                <div>
+              </div>
+            </div>
+          </div>
+        );
+      }
+    }
+    ReactDOM.render(
+      <App /> ,
+      document.getElementById('app')
+    )
+  </script>
+</body>
+</html>

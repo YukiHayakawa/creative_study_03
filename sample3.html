@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Markdown</title>
+  <style>
+    .logo {
+      display: block;
+      text-align: center;
+      text-decoration: none;
+      color: #333;
+      font-size: 24px;
+    }
+    .preview > div,
+    textarea {
+      min-height: 600px;
+    }
+    .preview,
+    .left {
+      float: left;
+      width: 50%;
+    }
+    .preview > div,
+    textarea,
+    input[type="text"] {
+      width: 100%;
+      display: block;
+      border: solid 1px #ddd;
+      margin: 12px 0;
+      padding: 12px;
+      box-sizing: border-box;
+    }
+    .btn {
+      text-align: right;
+    }
+    .btn a {
+      display: inline-block;
+      padding: 8px 16px;
+      font-size: 12px;
+      background: #ddd;
+      border-radius: 4px;
+    }
+    .list,
+    .wrap {
+      float: left;
+    }
+    .list {
+      width: 20%;
+      margin: 12px 0;
+      padding: 0;
+      border-top: 1px solid #ddd;
+    }
+    .list a {
+      display: block;
+      font-size: 12px;
+      color: #999;
+      text-decoration: none;
+      padding: 8px;
+      border-bottom: 1px solid #ddd;
+    }
+    .list a span {
+      display: inline-block;
+      padding: 4px;
+      background: #ddd;
+      border-radius: 4px;
+      margin-left: 4px;
+    }
+    .wrap {
+      width: 80%;
+    }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/16.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/16.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/0.3.12/marked.min.js"></script>
+  <script src="http://cdnjs.cloudflare.com/ajax/libs/babel-standalone/6.10.3/babel.min.js"></script>
+  <script type="text/babel">
+    class App extends React.Component {
+      constructor(props) {
+        super(props);
+        this.state = {
+          title: '',
+          text: '',
+          errorMsg: false,
+          nav: true,
+          list: [],
+          error: false,
+          locationId: location.search.replace(/.+?item=(\w+?)(&.*?$|$)/,'$1')
+        }
+        this.formSubmit = this.formSubmit.bind(this);
+        this.formChange = this.formChange.bind(this);
+        this.navToggle = this.navToggle.bind(this);
+      }
+
+      componentDidMount() {
+        fetch('/list.json').then((response) => {
+          return response.json();
+        }).then((json) => {
+          if (json.error) {
+            this.setState({error: true})
+          } else {
+            const pageDate = json.data.filter((item) => item._id === this.state.locationId);
+            this.setState(Object.assign({list: json.data},pageDate.length > 0 ? pageDate[0] : {}))
+          }
+        });
+      }
+
+      navToggle () {
+        this.setState({nav: !this.state.nav})
+      }
+      formChange (e) {
+        this.setState({[e.target.name]: e.target.value });
+      }
+
+      formSubmit (e) {
+        e.preventDefault();
+        const { title, text, _id } = this.state;
+        if (title === '' || text === '') {
+          this.setState({errorMsg: true });
+        } else {
+          this.setState({errorMsg: false });
+          fetch('/update.json', {
+            method: 'POST',
+            body : JSON.stringify(Object.assign({ title, text },_id ? {_id} : {})),
+            headers : new Headers({ "Content-type" : "application/json" })
+          }).then((response) => {
+            return response.json();
+          }).then((json) => {
+            location.href = `?item=${json.data._id}`;
+          });
+        }
+      }
+      render () {
+        const { title, text, list, errorMsg, nav, _id} = this.state;
+        return (
+          <div>
+            <a href="/" className="logo"># Markdown</a>
+            <div className="btn">
+              <a onClick={this.formSubmit}>
+                保存
+              </a>
+            </div>
+            <div>
+              <input onChange={this.formChange} placeholder="Title" name="title" type="text" value={title} />
+            </div>
+            {list.length > 0 &&
+              <ul className="list">
+                {list.map(item =>(
+                  <li><a href={`?item=${item._id}`}>
+                    {item.title}
+                    {_id && item._id === _id &&
+                      <span>edit</span>
+                    }
+                  </a></li>
+                ))}
+              </ul>
+            }
+            <div className="wrap">
+              <div className="left">
+                <textarea onChange={this.formChange} placeholder="Enter markdown text" className="textarea" name="text" value={text} />  
+              </div>
+              <div className="preview">
+                <div dangerouslySetInnerHTML={{__html: marked(text)}}></div> 
+              </div>
+            </div>
+          </div>
+        );
+      }
+    }
+    ReactDOM.render(
+      <App /> ,
+      document.getElementById('app')
+    )
+  </script>
+</body>
+</html>
